@@ -1,66 +1,51 @@
+#include <SFML/Graphics.hpp> // <--- ESTO ARREGLA EL ERROR DE sf::Keyboard
 #include "../../include/Entities/Player.hpp"
-#include <iostream> // Para debug
+#include <iostream>
 
 Player::Player(float x, float y) 
-    : Actor(x, y, 16, 16) // Tamaño del personaje: 16x16 píxeles
+    : Actor(x, y, 16.f, 16.f) 
 {
-    velocity = {0, 0};
+    velocity = {0.f, 0.f};
     isGrounded = false;
 }
 
 void Player::Update(float dt) {
-    // 1. INPUT: Leer teclado
     HandleInput();
 
-    // 2. FÍSICA: Aplicar Gravedad
-    // Siempre aplicamos gravedad, a menos que estemos escalando (futuro)
-    velocity.y += GRAVITY * dt;
+    // Gravedad
+    velocity.y += 900.0f * dt;
 
-    // 3. MOVIMIENTO HORIZONTAL (Eje X)
-    // Pasamos una función lambda que se ejecuta si chocamos contra una pared
+    // Movimiento X
     MoveX(velocity.x * dt, [this]() {
-        velocity.x = 0; // Si choco con pared, mi velocidad X muere
+        velocity.x = 0;
     });
 
-    // 4. MOVIMIENTO VERTICAL (Eje Y)
-    // Aquí es donde detectamos el suelo
-    isGrounded = false; // Asumimos que estamos en el aire hasta probar lo contrario
-    
+    // Movimiento Y
+    isGrounded = false;
     MoveY(velocity.y * dt, [this]() {
-        // Esta función se llama si chocamos arriba (techo) o abajo (suelo)
-        
-        if (velocity.y > 0) { 
-            // Si nos movíamos hacia abajo y chocamos, es el suelo.
-            isGrounded = true; 
-        }
-        
-        velocity.y = 0; // Detener velocidad vertical al chocar
+        if (velocity.y > 0) isGrounded = true; 
+        velocity.y = 0;
     });
 }
 
 void Player::HandleInput() {
-    // Resetear velocidad X cada frame (para movimiento preciso/instantáneo)
     velocity.x = 0;
 
-    // Movimiento Izquierda/Derecha
+    // Aquí usamos sf::Keyboard
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
-        velocity.x = SPEED;
+        velocity.x = 120.0f;
     }
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
-        velocity.x = -SPEED;
+        velocity.x = -120.0f;
     }
 
-    // Salto
-    // Solo podemos saltar si estamos en el suelo (isGrounded)
-    // NOTA: En el futuro, aquí añadiremos "Coyote Time"
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Z) && isGrounded) {
-        velocity.y = JUMP_FORCE;
-        isGrounded = false; // Ya no estamos en el suelo
+        velocity.y = -350.0f;
+        isGrounded = false;
     }
 }
 
 void Player::Render(sf::RenderWindow& window) {
-    // Dibujamos al jugador como un cuadrado rojo
     sf::RectangleShape rect(hitboxSize);
     rect.setPosition(position);
     rect.setFillColor(sf::Color::Red);
