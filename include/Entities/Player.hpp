@@ -4,24 +4,26 @@
 class Player : public Actor {
 public:
     Player(float x, float y);
-    
-    // Sobrescribimos Update para poner la lógica específica del héroe
-    void Update(float dt) override;
-    
-    // Sobrescribimos Render para dibujarlo de un color diferente (Rojo)
+    void Update(float dt, Level& level) override;
     void Render(sf::RenderWindow& window) override;
 
 private:
-    // --- Ajustes de Física (Tuning) ---
-    // Jugar con estos valores cambia totalmente el "Game Feel"
-    const float SPEED = 120.0f;       // Velocidad horizontal
-    const float GRAVITY = 900.0f;     // Gravedad fuerte para saltos rápidos
-    const float JUMP_FORCE = -350.0f; // Fuerza negativa (hacia arriba)
-
-    // --- Estado ---
-    sf::Vector2f velocity; // Velocidad actual (x, y)
-    bool isGrounded;       // ¿Estamos tocando el suelo?
-
-    // Métodos internos
     void HandleInput();
+    void StartDash(); // Nueva función para iniciar el dash
+
+    sf::Vector2f velocity;
+    bool isGrounded;
+
+    // --- VARIABLES DEL DASH ---
+    bool hasDash;        // ¿Tengo energía para hacer dash? (se recarga en el suelo)
+    bool isDashing;      // ¿Estoy en medio de un dash ahora mismo?
+    float dashTimer;     // Contador de tiempo (cuánto dura el dash)
+
+    // Ajustes (Tuning)
+    const float SPEED = 160.0f;
+    const float GRAVITY = 900.0f;
+    const float JUMP_FORCE = -350.0f;
+    
+    const float DASH_SPEED = 400.0f;  // Velocidad explosiva
+    const float DASH_DURATION = 0.15f; // Dura muy poco (150ms)
 };
