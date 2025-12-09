@@ -18,15 +18,15 @@ public:
     sf::FloatRect GetHitbox() const;
 
 protected:
+  protected:
     sf::Vector2f position;
     sf::Vector2f hitboxSize;
-    
     float remainderX;
     float remainderY;
 
     void MoveX(float amount, Level& level, std::function<void()> onCollide);
     void MoveY(float amount, Level& level, std::function<void()> onCollide);
 
-private:
+    // --- CAMBIO: MOVIDO DE PRIVATE A PROTECTED ---
     bool CheckCollision(sf::FloatRect box, Level& level);
 };

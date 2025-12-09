@@ -9,9 +9,10 @@ public:
 
     void Load();
     void Render(sf::RenderWindow& window);
-    bool IsSolid(int gridX, int gridY);
+    
+    bool IsSolid(int gridX, int gridY); // Para paredes (#)
+    bool IsHazard(int gridX, int gridY); // NUEVO: Para pinchos (^)
 
-    // Necesario para matemáticas de colisión
     float GetTileSize() const { return tileSize; }
 
 private:
