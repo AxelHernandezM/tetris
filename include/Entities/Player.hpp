@@ -1,5 +1,6 @@
 #pragma once
 #include "Actor.hpp"
+#include <vector> // <--- OBLIGATORIO: Sin esto, el vector no funciona
 
 class Player : public Actor {
 public:
@@ -13,6 +14,7 @@ private:
     void CheckDeath(Level& level);
     void Respawn();
 
+    // Física
     sf::Vector2f velocity;
     sf::Vector2f spawnPosition;
     bool isGrounded;
@@ -29,19 +31,15 @@ private:
     // Gráficos
     sf::Texture texture;
     sf::Sprite sprite;
-    int facingDir; // 1 = Derecha, -1 = Izquierda
+    int facingDir;
 
-    // --- ANIMACIÓN ---
+    // --- ESTA ES LA VARIABLE QUE TE FALTA ---
+    std::vector<sf::IntRect> animationFrames; 
+    // ----------------------------------------
+
     int currentFrame;
     float animationTimer;
     
-    // AQUÍ ESTABAN FALTANDO ESTAS VARIABLES:
-    int numCols;     // Columnas
-    int numRows;     // Filas
-    int numFrames;   // Cuadros totales
-    int frameWidth;  // Ancho de un cuadro
-    int frameHeight; // Alto de un cuadro
-
     // Constantes
     const float SPEED = 160.0f;
     const float GRAVITY = 900.0f;

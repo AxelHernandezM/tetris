@@ -1,54 +1,68 @@
 #include <SFML/Graphics.hpp>
 #include "../../include/Entities/Player.hpp"
+#include "../../include/json.hpp" 
 #include <iostream>
+#include <fstream>
 #include <cmath>
 
-// Ya no necesitamos variables globales aquí arriba porque ya están en el .hpp
+using json = nlohmann::json;
 
 Player::Player(float x, float y) 
-    : Actor(x, y, 30.f, 64.f) // Hitbox rectangular (Ancho 30, Alto 64)
+    : Actor(x, y, 16.f, 16.f) 
 {
     spawnPosition = {x, y};
     velocity = {0.f, 0.f};
     isGrounded = false;
-    
-    // Inicializar mecánicas
-    hasDash = true; isDashing = false; dashTimer = 0.0f;
-    wallDir = 0; wallJumpTimer = 0.0f;
-    coyoteTimer = 0.0f; jumpBufferTimer = 0.0f;
+    hasDash = true; isDashing = false; dashTimer = 0.f;
+    wallDir = 0; wallJumpTimer = 0.f; coyoteTimer = 0.f; jumpBufferTimer = 0.f;
 
-    // 1. CARGAR IMAGEN
-    if (!texture.loadFromFile("Assets/player_run.png")) {
-        std::cout << "ERROR: No se encontró Assets/player_run.png" << std::endl;
-        texture.create(64, 64);
+    // 1. CARGAR PNG
+    if (!texture.loadFromFile("Assets/CHIAPASIANOTE.png")) { 
+        std::cout << "Error: No se encontro Assets/CHIAPASIANOTE.png" << std::endl;
+        texture.create(32, 32);
     }
     sprite.setTexture(texture);
 
-    // 2. CONFIGURACIÓN DE ANIMACIÓN
-    sf::Vector2u size = texture.getSize();
+    // 2. CARGAR JSON
+    std::ifstream f("Assets/CHIAPASIANOTE.json"); 
+    if (f.is_open()) {
+        json data = json::parse(f);
 
-    // --- AJUSTA ESTOS DOS NÚMEROS A TU IMAGEN ---
-    numCols = 1;  // ¿Cuántos monitos hay a lo ancho?
-    numRows = 1;  // ¿Cuántas filas hay hacia abajo?
-    // --------------------------------------------
-
-    // Cálculo automático
-    frameWidth = size.x / numCols;
-    frameHeight = size.y / numRows;
-    numFrames = numCols * numRows;
+        if (data.contains("frames") && data["frames"].is_array()) {
+            for (auto& element : data["frames"]) {
+                int x = element["frame"]["x"];
+                int y = element["frame"]["y"];
+                int w = element["frame"]["w"];
+                int h = element["frame"]["h"];
+                animationFrames.push_back(sf::IntRect(x, y, w, h));
+            }
+        }
+        else if (data.contains("frames") && data["frames"].is_object()) {
+             for (auto& element : data["frames"].items()) {
+                auto val = element.value()["frame"];
+                int x = val["x"];
+                int y = val["y"];
+                int w = val["w"];
+                int h = val["h"];
+                animationFrames.push_back(sf::IntRect(x, y, w, h));
+            }
+        }
+    } else {
+        std::cout << "Error: No se encontro Assets/CHIAPASIANOTE.json" << std::endl;
+    }
 
     currentFrame = 0;
     animationTimer = 0.0f;
+    facingDir = 1;
 
-    // Poner el punto de pivote en los PIES del personaje
-    sprite.setOrigin(frameWidth / 2.0f, (float)frameHeight);
-    
-    facingDir = 1; 
-    sprite.setTextureRect(sf::IntRect(0, 0, frameWidth, frameHeight));
+    if (!animationFrames.empty()) {
+        sprite.setTextureRect(animationFrames[0]);
+        sprite.setOrigin(animationFrames[0].width / 2.f, (float)animationFrames[0].height);
+    }
 }
 
 void Player::Update(float dt, Level& level) {
-    // --- TIMERS ---
+    // TIMERS
     if (isDashing) {
         dashTimer -= dt;
         if (dashTimer <= 0) { isDashing = false; velocity.x = 0; velocity.y = 0; }
@@ -57,7 +71,7 @@ void Player::Update(float dt, Level& level) {
     if (coyoteTimer > 0) coyoteTimer -= dt;
     if (jumpBufferTimer > 0) jumpBufferTimer -= dt;
 
-    // --- PAREDES ---
+    // PAREDES
     wallDir = 0;
     sf::FloatRect box = GetHitbox();
     sf::FloatRect boxLeft = box; boxLeft.left -= 2.0f; 
@@ -65,10 +79,10 @@ void Player::Update(float dt, Level& level) {
     sf::FloatRect boxRight = box; boxRight.left += 2.0f; 
     if (CheckCollision(boxRight, level)) wallDir = 1;
 
-    // --- INPUTS ---
+    // INPUTS
     HandleInput();
 
-    // --- FÍSICA ---
+    // FÍSICA
     if (!isDashing) {
         if (velocity.y > 0 && wallDir != 0 && !isGrounded) velocity.y = WALL_SLIDE_SPEED; 
         else velocity.y += GRAVITY * dt;   
@@ -77,56 +91,43 @@ void Player::Update(float dt, Level& level) {
     MoveX(velocity.x * dt, level, [this]() { velocity.x = 0; });
     isGrounded = false;
     MoveY(velocity.y * dt, level, [this]() {
-        if (velocity.y > 0) { 
-            isGrounded = true; hasDash = true; isDashing = false; coyoteTimer = COYOTE_TIME; 
-        }
+        if (velocity.y > 0) { isGrounded = true; hasDash = true; isDashing = false; coyoteTimer = COYOTE_TIME; }
         velocity.y = 0;
     });
 
-    // --- ANIMACIÓN ---
-    if (velocity.x != 0 && isGrounded) {
-        animationTimer += dt;
-        if (animationTimer >= ANIM_SPEED) {
+    // ANIMACIÓN
+    if (!animationFrames.empty()) {
+        if (velocity.x != 0 && isGrounded) {
+            animationTimer += dt;
+            if (animationTimer >= ANIM_SPEED) {
+                animationTimer = 0;
+                currentFrame++;
+                if (currentFrame >= animationFrames.size()) {
+                    currentFrame = 0;
+                }
+            }
+        } else {
+            currentFrame = 0; // Idle
             animationTimer = 0;
-            currentFrame++;
-            if (currentFrame >= numFrames) currentFrame = 0;
         }
-    } else {
-        currentFrame = 0; 
-        animationTimer = 0;
+        sprite.setTextureRect(animationFrames[currentFrame]);
     }
-
-    // Calcular recorte
-    int currentColumn = currentFrame % numCols;
-    int currentRow = currentFrame / numCols;
-    int frameX = currentColumn * frameWidth;
-    int frameY = currentRow * frameHeight;
-
-    sprite.setTextureRect(sf::IntRect(frameX, frameY, frameWidth, frameHeight));
 
     CheckDeath(level);
 }
 
 void Player::Render(sf::RenderWindow& window) {
-    // A. Posicionar
     sprite.setPosition(position.x + (hitboxSize.x / 2.0f), position.y + hitboxSize.y);
-    
-    // B. Voltear
     sprite.setScale(std::abs(sprite.getScale().x) * facingDir, sprite.getScale().y);
-
-    // C. Colores
-    sprite.setColor(sf::Color::White); 
-    if (isDashing) sprite.setColor(sf::Color::Cyan); 
+    
+    sprite.setColor(sf::Color::White);
+    if (isDashing) sprite.setColor(sf::Color::Cyan);
     else if (!hasDash) sprite.setColor(sf::Color(100, 100, 200));
 
-    // D. Dibujar
     window.draw(sprite);
-
-    // E. Dibujar Hitbox Verde
-    Actor::Render(window); 
 }
 
-// --- FUNCIONES EXTRA ---
+// AUXILIARES
 void Player::CheckDeath(Level& level) {
     if (position.y > 800) { Respawn(); return; }
     sf::FloatRect box = GetHitbox();
