@@ -17,33 +17,32 @@ private:
     sf::Vector2f spawnPosition;
     bool isGrounded;
 
-    // Variables Dash
+    // Mecánicas
     bool hasDash;
     bool isDashing;
     float dashTimer;
-
-    // Variables Wall Jump
     int wallDir;
     float wallJumpTimer;
-
-    // Game Juice
     float coyoteTimer;
     float jumpBufferTimer;
 
-    // --- NUEVO: GRÁFICOS ---
-   sf::Texture texture;
+    // Gráficos
+    sf::Texture texture;
     sf::Sprite sprite;
-    int facingDir; 
+    int facingDir; // 1 = Derecha, -1 = Izquierda
 
-    // Variables de Animación
-    int currentFrame;       // ¿En qué cuadro vamos? (0, 1, 2...)
-    float animationTimer;   // Cronómetro para cambiar de cuadro
-    int numFrames;          // Cuántos cuadros tiene la animación total
-    int frameWidth;         // Ancho de un solo cuadro (ej. 32px)
-    int frameHeight;        // Alto de un solo cuadro (ej. 32px)
-    const float ANIM_SPEED = 0.1f; // Velocidad (cambia cada 0.1 segundos)
+    // --- ANIMACIÓN ---
+    int currentFrame;
+    float animationTimer;
+    
+    // AQUÍ ESTABAN FALTANDO ESTAS VARIABLES:
+    int numCols;     // Columnas
+    int numRows;     // Filas
+    int numFrames;   // Cuadros totales
+    int frameWidth;  // Ancho de un cuadro
+    int frameHeight; // Alto de un cuadro
 
-    // Ajustes
+    // Constantes
     const float SPEED = 160.0f;
     const float GRAVITY = 900.0f;
     const float JUMP_FORCE = -350.0f;
@@ -55,4 +54,5 @@ private:
     const float WALL_JUMP_TIME = 0.15f;
     const float COYOTE_TIME = 0.1f;
     const float JUMP_BUFFER_TIME = 0.1f;
+    const float ANIM_SPEED = 0.1f;
 };

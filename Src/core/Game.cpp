@@ -12,11 +12,15 @@ void Game::Init() {
     window.create(sf::VideoMode(800, 600), "Celeste Clone C++");
     window.setFramerateLimit(60);
 
-    // --- NUEVO: Configurar tamaño de la cámara ---
-    // Hacemos que la cámara vea un área de 800x600 (igual que la ventana)
+    // Configurar cámara
     camera.setSize(800.f, 600.f);
 
-    level.Load();
+    // --- CORRECCIÓN AQUÍ ---
+    // Ya no usamos LoadFromFile("...") porque el mapa está escrito en el código.
+    // Solo llamamos a Load() sin parámetros.
+    level.Load(); 
+    // -----------------------
+
     player = new Player(100.f, 100.f); 
 
     isRunning = true;
@@ -57,24 +61,14 @@ void Game::Update(float dt) {
 void Game::Render() {
     window.clear(sf::Color::Black);
 
-    // --- NUEVO: Lógica de la Cámara ---
+    // Lógica de la Cámara
     if (player) {
-        // 1. Obtenemos la posición del centro del jugador
         sf::Vector2f pos = player->GetPosition();
-        
-        // Ajuste opcional: Sumamos mitad del tamaño del player (8,8) para centrar exacto
-        pos.x += 8.f; 
-        pos.y += 8.f;
-
-        // 2. Le decimos a la cámara "Mira aquí"
-        camera.setCenter(pos);
-
-        // 3. Aplicamos la cámara a la ventana
+        camera.setCenter(pos.x + 10.f, pos.y + 10.f);
         window.setView(camera);
     }
-    // ----------------------------------
 
-    // Todo lo que dibujemos después de setView se verá afectado por la cámara
+    // Dibujar
     level.Render(window);
 
     if (player) {
