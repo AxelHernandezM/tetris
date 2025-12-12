@@ -1,14 +1,27 @@
 #include <SFML/Graphics.hpp>
 #include "../../include/Entities/Player.hpp"
-#include "../../include/json.hpp" 
 #include <iostream>
-#include <fstream>
-#include <cmath>
+#include <cmath> 
 
-using json = nlohmann::json;
+// ==========================================
+// CONSTANTES DE FÍSICA (Necesarias para que compile)
+// ==========================================
+const float SPEED = 140.0f;              
+const float GRAVITY = 900.0f;            
+const float JUMP_FORCE = -300.0f;        
+const float DASH_SPEED = 400.0f;         
+const float DASH_DURATION = 0.15f;       
+const float WALL_SLIDE_SPEED = 30.0f;    
+const float WALL_JUMP_FORCE_X = 200.0f;  
+const float WALL_JUMP_FORCE_Y = -300.0f; 
+const float WALL_JUMP_TIME = 0.15f;      
+const float COYOTE_TIME = 0.1f;          
+const float JUMP_BUFFER_TIME = 0.1f;     
+const float ANIM_SPEED = 0.08f;          
+// ==========================================
 
 Player::Player(float x, float y) 
-    : Actor(x, y, 16.f, 16.f) 
+    : Actor(x, y, 16.f, 32.f) 
 {
     spawnPosition = {x, y};
     velocity = {0.f, 0.f};
@@ -16,53 +29,32 @@ Player::Player(float x, float y)
     hasDash = true; isDashing = false; dashTimer = 0.f;
     wallDir = 0; wallJumpTimer = 0.f; coyoteTimer = 0.f; jumpBufferTimer = 0.f;
 
-    // 1. CARGAR PNG
     if (!texture.loadFromFile("Assets/CHIAPASIANOTE.png")) { 
-        std::cout << "Error: No se encontro Assets/CHIAPASIANOTE.png" << std::endl;
+        std::cout << "[ERROR] No se encontro Assets/CHIAPASIANOTE.png" << std::endl;
         texture.create(32, 32);
-    }
+    } 
     sprite.setTexture(texture);
 
-    // 2. CARGAR JSON
-    std::ifstream f("Assets/CHIAPASIANOTE.json"); 
-    if (f.is_open()) {
-        json data = json::parse(f);
-
-        if (data.contains("frames") && data["frames"].is_array()) {
-            for (auto& element : data["frames"]) {
-                int x = element["frame"]["x"];
-                int y = element["frame"]["y"];
-                int w = element["frame"]["w"];
-                int h = element["frame"]["h"];
-                animationFrames.push_back(sf::IntRect(x, y, w, h));
-            }
+    int numFrames = 12; int frameW = 16; int frameH = 32; 
+    animationFrames.clear();
+    for (int i = 0; i < numFrames; i++) {
+        int rectX = i * frameW;
+        if (rectX + frameW <= (int)texture.getSize().x) {
+            animationFrames.push_back(sf::IntRect(rectX, 0, frameW, frameH));
         }
-        else if (data.contains("frames") && data["frames"].is_object()) {
-             for (auto& element : data["frames"].items()) {
-                auto val = element.value()["frame"];
-                int x = val["x"];
-                int y = val["y"];
-                int w = val["w"];
-                int h = val["h"];
-                animationFrames.push_back(sf::IntRect(x, y, w, h));
-            }
-        }
-    } else {
-        std::cout << "Error: No se encontro Assets/CHIAPASIANOTE.json" << std::endl;
     }
-
-    currentFrame = 0;
-    animationTimer = 0.0f;
-    facingDir = 1;
+    currentFrame = 0; animationTimer = 0.0f; facingDir = 1;
 
     if (!animationFrames.empty()) {
         sprite.setTextureRect(animationFrames[0]);
-        sprite.setOrigin(animationFrames[0].width / 2.f, (float)animationFrames[0].height);
+        sprite.setOrigin(frameW / 2.f, (float)frameH);
     }
 }
 
 void Player::Update(float dt, Level& level) {
-    // TIMERS
+    // Resetear eventos
+    eventJumped = false; eventDashed = false; eventLanded = false; 
+
     if (isDashing) {
         dashTimer -= dt;
         if (dashTimer <= 0) { isDashing = false; velocity.x = 0; velocity.y = 0; }
@@ -71,7 +63,6 @@ void Player::Update(float dt, Level& level) {
     if (coyoteTimer > 0) coyoteTimer -= dt;
     if (jumpBufferTimer > 0) jumpBufferTimer -= dt;
 
-    // PAREDES
     wallDir = 0;
     sf::FloatRect box = GetHitbox();
     sf::FloatRect boxLeft = box; boxLeft.left -= 2.0f; 
@@ -79,55 +70,54 @@ void Player::Update(float dt, Level& level) {
     sf::FloatRect boxRight = box; boxRight.left += 2.0f; 
     if (CheckCollision(boxRight, level)) wallDir = 1;
 
-    // INPUTS
     HandleInput();
 
-    // FÍSICA
     if (!isDashing) {
         if (velocity.y > 0 && wallDir != 0 && !isGrounded) velocity.y = WALL_SLIDE_SPEED; 
         else velocity.y += GRAVITY * dt;   
     }
 
     MoveX(velocity.x * dt, level, [this]() { velocity.x = 0; });
+    
     isGrounded = false;
     MoveY(velocity.y * dt, level, [this]() {
-        if (velocity.y > 0) { isGrounded = true; hasDash = true; isDashing = false; coyoteTimer = COYOTE_TIME; }
+        if (velocity.y > 0) { 
+            isGrounded = true; hasDash = true; isDashing = false; coyoteTimer = COYOTE_TIME; 
+            if (velocity.y > 200.f) eventLanded = true; 
+        }
         velocity.y = 0;
     });
 
-    // ANIMACIÓN
     if (!animationFrames.empty()) {
-        if (velocity.x != 0 && isGrounded) {
-            animationTimer += dt;
-            if (animationTimer >= ANIM_SPEED) {
-                animationTimer = 0;
-                currentFrame++;
-                if (currentFrame >= animationFrames.size()) {
-                    currentFrame = 0;
+        bool isMoving = std::abs(velocity.x) > 10.f;
+        bool isOnFloor = coyoteTimer > 0.0f; 
+        if (isOnFloor) {
+            if (isMoving) {
+                animationTimer += dt;
+                if (animationTimer >= ANIM_SPEED) {
+                    animationTimer = 0; currentFrame++;
+                    if (currentFrame >= animationFrames.size()) currentFrame = 1; 
                 }
-            }
+            } else { currentFrame = 0; animationTimer = 0; }
         } else {
-            currentFrame = 0; // Idle
-            animationTimer = 0;
+            if (velocity.y < 0) currentFrame = 3; 
+            else currentFrame = 8;
+            if (currentFrame >= animationFrames.size()) currentFrame = 0;
         }
         sprite.setTextureRect(animationFrames[currentFrame]);
     }
-
     CheckDeath(level);
 }
 
 void Player::Render(sf::RenderWindow& window) {
     sprite.setPosition(position.x + (hitboxSize.x / 2.0f), position.y + hitboxSize.y);
     sprite.setScale(std::abs(sprite.getScale().x) * facingDir, sprite.getScale().y);
-    
     sprite.setColor(sf::Color::White);
     if (isDashing) sprite.setColor(sf::Color::Cyan);
     else if (!hasDash) sprite.setColor(sf::Color(100, 100, 200));
-
     window.draw(sprite);
 }
 
-// AUXILIARES
 void Player::CheckDeath(Level& level) {
     if (position.y > 800) { Respawn(); return; }
     sf::FloatRect box = GetHitbox();
@@ -148,6 +138,7 @@ void Player::Respawn() {
 void Player::StartDash() {
     if (hasDash) {
         isDashing = true; hasDash = false; dashTimer = DASH_DURATION; wallJumpTimer = 0; 
+        eventDashed = true; 
         float dirX = 0; float dirY = 0;
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) dirX = 1;
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))  dirX = -1;
@@ -168,8 +159,14 @@ void Player::HandleInput() {
     if (isZPressed && !wasZPressed) jumpBufferTimer = JUMP_BUFFER_TIME;
     wasZPressed = isZPressed;
     if (jumpBufferTimer > 0) {
-        if (coyoteTimer > 0) { velocity.y = JUMP_FORCE; jumpBufferTimer = 0; coyoteTimer = 0; isGrounded = false; }
-        else if (wallDir != 0) { velocity.y = WALL_JUMP_FORCE_Y; velocity.x = -wallDir * WALL_JUMP_FORCE_X; wallJumpTimer = WALL_JUMP_TIME; facingDir = -wallDir; jumpBufferTimer = 0; }
+        if (coyoteTimer > 0) { 
+            velocity.y = JUMP_FORCE; jumpBufferTimer = 0; coyoteTimer = 0; isGrounded = false; 
+            eventJumped = true; 
+        }
+        else if (wallDir != 0) { 
+            velocity.y = WALL_JUMP_FORCE_Y; velocity.x = -wallDir * WALL_JUMP_FORCE_X; wallJumpTimer = WALL_JUMP_TIME; facingDir = -wallDir; jumpBufferTimer = 0; 
+            eventJumped = true; 
+        }
     }
     static bool wasXPressed = false; bool isXPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::X);
     if (isXPressed && !wasXPressed) StartDash();
