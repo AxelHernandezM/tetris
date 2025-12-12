@@ -19,12 +19,17 @@ private:
 
     sf::RenderWindow window;
     
-    // --- NUEVO: La Cámara ---
+    // Cámara
     sf::View camera;
-    // ------------------------
 
     bool isRunning;
     
+    // --- VARIABLES DEL EDITOR ---
+    bool editorMode;       // ¿Está activado el modo edición?
+    bool isClicking;       // Para control del mouse
+    char selectedTile;     // ¿Qué bloque tenemos seleccionado? (NUEVO)
+    // ----------------------------
+
     Player* player;
     Level level;
     

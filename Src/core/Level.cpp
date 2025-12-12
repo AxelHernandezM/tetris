@@ -3,7 +3,7 @@
 #include <cmath>
 #include <algorithm> // Necesario para std::max
 
-// Variables globales para texturas (Legacy)
+// Variables globales para texturas
 sf::Texture tileTexture;
 sf::Sprite tileSprite;
 
@@ -21,7 +21,6 @@ Level::Level() {
 
     // --- 2. Cargar Fondo ---
     bool bgLoaded = false;
-    // Lista de intentos por si Windows cambia el nombre
     std::vector<std::string> bgNames = {
         "Assets/Background.png",
         "Assets/background.png",
@@ -31,16 +30,15 @@ Level::Level() {
     for (const auto& name : bgNames) {
         if (bgTexture.loadFromFile(name)) {
             bgLoaded = true;
-            bgSprite.setColor(sf::Color::White); // Color normal
+            bgSprite.setColor(sf::Color::White); 
             break;
         }
     }
 
     if (!bgLoaded) {
-        // Fallback visual: Si ves la pantalla ROSA, es que no encontró la imagen
-        std::cout << "ADVERTENCIA: Fondo no encontrado. Usando magenta de debug." << std::endl;
+        std::cout << "ADVERTENCIA: Fondo no encontrado." << std::endl;
         bgTexture.create(100, 100);
-        bgSprite.setColor(sf::Color::Magenta); 
+        bgSprite.setColor(sf::Color::Magenta); // Debug Rosa
     }
     
     bgSprite.setTexture(bgTexture);
@@ -79,7 +77,6 @@ bool Level::IsHazard(int gridX, int gridY) {
     return mapData[gridY][gridX] == '^';
 }
 
-// --- NUEVO: Implementación de la función que faltaba ---
 bool Level::IsHazard(sf::FloatRect rect) {
     int startX = static_cast<int>(rect.left / tileSize);
     int endX = static_cast<int>((rect.left + rect.width) / tileSize);
@@ -97,8 +94,19 @@ bool Level::IsHazard(sf::FloatRect rect) {
     return false;
 }
 
+// --- ESTA ES LA FUNCIÓN QUE TE FALTABA Y CAUSABA EL ERROR ---
+void Level::SetTile(int gridX, int gridY, char tile) {
+    // Verificamos que las coordenadas estén dentro del mapa para no crashear
+    if (gridY >= 0 && gridY < mapData.size()) {
+        if (gridX >= 0 && gridX < mapData[gridY].size()) {
+            mapData[gridY][gridX] = tile;
+        }
+    }
+}
+// -----------------------------------------------------------
+
 void Level::Render(sf::RenderWindow& window) {
-    // 1. DIBUJAR FONDO (Background)
+    // 1. Fondo
     sf::View currentView = window.getView();
     sf::Vector2f viewCenter = currentView.getCenter();
     sf::Vector2f viewSize = currentView.getSize();
@@ -113,7 +121,7 @@ void Level::Render(sf::RenderWindow& window) {
     bgSprite.setScale(scale, scale);
     window.draw(bgSprite);
 
-    // 2. DIBUJAR TILES
+    // 2. Tiles
     for (int y = 0; y < mapData.size(); y++) {
         for (int x = 0; x < mapData[y].size(); x++) {
             char cell = mapData[y][x];
