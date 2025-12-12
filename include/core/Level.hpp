@@ -1,7 +1,7 @@
 #pragma once
-#include <SFML/Graphics.hpp>
 #include <vector>
 #include <string>
+#include <SFML/Graphics.hpp>
 
 class Level {
 public:
@@ -9,14 +9,22 @@ public:
     void Load();
     void Render(sf::RenderWindow& window);
     
-    bool IsSolid(int gridX, int gridY);
-    bool IsHazard(int gridX, int gridY);
+    // Verificadores básicos
+    bool IsSolid(int x, int y);
+    bool IsHazard(int x, int y);
+
+    // --- NUEVO: ESTA LÍNEA FALTABA ---
+    // Sobrecarga para detectar colisión con el rectángulo del jugador
+    bool IsHazard(sf::FloatRect rect); 
+
+    // Getter
     float GetTileSize() const { return tileSize; }
 
 private:
-    // --- ESTO ES LO QUE TE FALTABA ---
     std::vector<std::string> mapData;
-    // ---------------------------------
-    
     float tileSize;
+
+    // --- NUEVO: ESTAS VARIABLES FALTABAN ---
+    sf::Texture bgTexture;
+    sf::Sprite bgSprite;
 };

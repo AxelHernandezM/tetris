@@ -2,18 +2,25 @@
 #include <cmath>
 
 Actor::Actor(float x, float y, float width, float height)
-    : position(x, y), hitboxSize(width, height), remainderX(0), remainderY(0) {}
+    : position(x, y), hitboxSize(width, height), remainderX(0), remainderY(0) 
+{
+    // --- CONFIGURACIÓN DE LA HITBOX VISIBLE ---
+    hitboxDebug.setSize(hitboxSize);
+    // Relleno verde semitransparente (R, G, B, Alpha) -> Alpha 100 es medio transparente
+    hitboxDebug.setFillColor(sf::Color(0, 255, 0, 100)); 
+    // Borde verde sólido
+    hitboxDebug.setOutlineColor(sf::Color::Green);
+    hitboxDebug.setOutlineThickness(1.0f);
+}
 
 sf::FloatRect Actor::GetHitbox() const {
     return sf::FloatRect(position.x, position.y, hitboxSize.x, hitboxSize.y);
 }
 
 void Actor::Render(sf::RenderWindow& window) {
-    // Dibujo de debug (caja verde)
-    sf::RectangleShape rect(hitboxSize);
-    rect.setPosition(position);
-    rect.setFillColor(sf::Color::Green);
-    window.draw(rect);
+    // Actualizamos la posición de la caja verde para que siga al jugador
+    hitboxDebug.setPosition(position);
+    window.draw(hitboxDebug);
 }
 
 // --- DETECCIÓN DE COLISIÓN (GRID) ---
@@ -22,7 +29,7 @@ bool Actor::CheckCollision(sf::FloatRect box, Level& level) {
     
     // Convertimos pixeles a coordenadas de cuadrícula (0, 1, 2...)
     int left_tile   = static_cast<int>(box.left / ts);
-    int right_tile  = static_cast<int>((box.left + box.width - 0.01f) / ts); // -0.01 para no agarrar el bloque vecino exacto
+    int right_tile  = static_cast<int>((box.left + box.width - 0.01f) / ts);
     int top_tile    = static_cast<int>(box.top / ts);
     int bottom_tile = static_cast<int>((box.top + box.height - 0.01f) / ts);
 
