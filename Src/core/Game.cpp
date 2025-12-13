@@ -12,23 +12,27 @@ Game::~Game() { if (player) delete player; }
 void Game::Init() {
     std::srand(static_cast<unsigned>(std::time(nullptr))); 
 
-    window.create(sf::VideoMode(800, 600), "Celeste Clone - [JUEGO]");
+    // CAMBIO: Título de la ventana
+    window.create(sf::VideoMode(800, 600), "Itxcho");
     window.setFramerateLimit(60);
     camera.setSize(800.f, 600.f);
     
     currentState = GameState::MENU; 
     menuTimer = 0.0f;
 
-    if (!font.loadFromFile("Assets/font.ttf")) std::cout << "[ERROR] Falta font.ttf" << std::endl;
+    // CAMBIO: Ruta Assets/texto/
+    if (!font.loadFromFile("Assets/texto/font.ttf")) std::cout << "[ERROR] Falta Assets/texto/font.ttf" << std::endl;
     
-    scoreText.setFont(font); scoreText.setString("Fresas: 0"); scoreText.setCharacterSize(30);
+    // CAMBIO: Texto "Limones"
+    scoreText.setFont(font); scoreText.setString("Limones: 0"); scoreText.setCharacterSize(30);
     scoreText.setFillColor(sf::Color::White); scoreText.setOutlineColor(sf::Color::Black); scoreText.setOutlineThickness(2.0f);
     scoreText.setPosition(20.f, 20.f);
 
     winText.setFont(font); winText.setString("GANASTE\nPresiona R"); winText.setCharacterSize(50);
     winText.setFillColor(sf::Color::Yellow); winText.setOutlineColor(sf::Color::Black); winText.setOutlineThickness(4.0f);
 
-    titleText.setFont(font); titleText.setString("CELESTE CLONE"); titleText.setCharacterSize(60);
+    // CAMBIO: Título del menú
+    titleText.setFont(font); titleText.setString("ITXCHO"); titleText.setCharacterSize(80); // Más grande
     titleText.setFillColor(sf::Color::Cyan); titleText.setOutlineColor(sf::Color::Black); titleText.setOutlineThickness(4.0f);
     sf::FloatRect tr = titleText.getLocalBounds(); titleText.setOrigin(tr.width/2, tr.height/2); titleText.setPosition(400, 200);
 
@@ -36,19 +40,19 @@ void Game::Init() {
     instructionText.setFillColor(sf::Color::White);
     sf::FloatRect ir = instructionText.getLocalBounds(); instructionText.setOrigin(ir.width/2, ir.height/2); instructionText.setPosition(400, 400);
 
-    // AUDIOS
-    if (buffJump.loadFromFile("Assets/jump.wav")) sndJump.setBuffer(buffJump);
-    if (buffDash.loadFromFile("Assets/dash.wav")) sndDash.setBuffer(buffDash);
-    if (buffCollect.loadFromFile("Assets/collect.wav")) sndCollect.setBuffer(buffCollect);
+    // CAMBIO: Rutas Assets/musica/
+    if (buffJump.loadFromFile("Assets/musica/jump.wav")) sndJump.setBuffer(buffJump);
+    if (buffDash.loadFromFile("Assets/musica/dash.wav")) sndDash.setBuffer(buffDash);
+    if (buffCollect.loadFromFile("Assets/musica/collect.wav")) sndCollect.setBuffer(buffCollect);
     
-    // CARGAR MUERTE
-    if (buffDeath.loadFromFile("Assets/death.wav")) sndDeath.setBuffer(buffDeath);
-    else std::cout << "[ERROR] Falta Assets/death.wav" << std::endl;
+    if (buffDeath.loadFromFile("Assets/musica/death.wav")) sndDeath.setBuffer(buffDeath);
+    else std::cout << "[ERROR] Falta Assets/musica/death.wav" << std::endl;
 
     sndJump.setVolume(50); sndDash.setVolume(60); sndCollect.setVolume(70); 
     sndDeath.setVolume(80);
 
-    if (!music.openFromFile("Assets/music.ogg")) std::cout << "[ERROR] Falta music.ogg" << std::endl;
+    // CAMBIO: Ruta musica
+    if (!music.openFromFile("Assets/musica/music.ogg")) std::cout << "[ERROR] Falta Assets/musica/music.ogg" << std::endl;
     else { music.setLoop(true); music.setVolume(25); music.play(); }
 }
 
@@ -59,7 +63,8 @@ void Game::ResetGame() {
     player = new Player(startPos.x, startPos.y); 
     score = 0;
     gameWon = false;
-    scoreText.setString("Fresas: 0");
+    // CAMBIO: Resetear texto a Limones
+    scoreText.setString("Limones: 0");
     lastFrameTime = std::chrono::high_resolution_clock::now();
 }
 
@@ -94,12 +99,12 @@ void Game::ProcessInput() {
             }
             if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::E) {
                 editorMode = !editorMode;
-                if (editorMode) window.setTitle("EDITOR ACTIVADO"); else window.setTitle("Celeste Clone - [JUEGO]");
+                if (editorMode) window.setTitle("EDITOR ACTIVADO"); else window.setTitle("Itxcho");
             }
             if (editorMode && event.type == sf::Event::KeyPressed) {
                 if (event.key.code == sf::Keyboard::Num1) { selectedTile = '#'; window.setTitle("EDITOR: [1] PASTO #"); }
                 if (event.key.code == sf::Keyboard::Num2) { selectedTile = '^'; window.setTitle("EDITOR: [2] PINCHO ^"); }
-                if (event.key.code == sf::Keyboard::Num3) { selectedTile = '@'; window.setTitle("EDITOR: [3] FRESA @"); }
+                if (event.key.code == sf::Keyboard::Num3) { selectedTile = '@'; window.setTitle("EDITOR: [3] LIMON @"); }
                 if (event.key.code == sf::Keyboard::Num4) { selectedTile = 'B'; window.setTitle("EDITOR: [4] LADRILLO B"); }
             }
         }
@@ -142,13 +147,12 @@ void Game::Update(float dt) {
         if (player->eventDashed) { sndDash.play(); }
         if (player->eventLanded) { particleSystem.Emit(feetPos, 4); }
         
-        // REPRODUCIR SONIDO SI MURIO
-        if (player->eventDied) {
-            sndDeath.play();
-        }
+        if (player->eventDied) { sndDeath.play(); }
 
         if (level.CheckCollection(player->GetHitbox())) {
-            score++; scoreText.setString("Fresas: " + std::to_string(score));
+            score++; 
+            // CAMBIO: Actualizar marcador a Limones
+            scoreText.setString("Limones: " + std::to_string(score));
             sndCollect.play(); 
         }
 

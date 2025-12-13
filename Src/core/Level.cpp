@@ -7,23 +7,23 @@ Level::Level() {
     tileSize = 40.0f;
     currentLevelIndex = 0;
 
-    // --- CARGAR TEXTURAS ---
-    if (!tilesetTexture.loadFromFile("Assets/tileset.png")) {
-        std::cout << "[ERROR] Falta Assets/tileset.png" << std::endl;
+    // --- RUTAS ACTUALIZADAS ---
+    if (!tilesetTexture.loadFromFile("Assets/imagenes/tileset.png")) {
+        std::cout << "[ERROR] Falta Assets/imagenes/tileset.png" << std::endl;
         tilesetTexture.create(96, 32); 
     }
     tileSprite.setTexture(tilesetTexture);
 
-    if (!spikeTexture.loadFromFile("Assets/spike.png")) spikeTexture.create(32, 32);
+    if (!spikeTexture.loadFromFile("Assets/imagenes/spike.png")) spikeTexture.create(32, 32);
     spikeSprite.setTexture(spikeTexture);
 
-    if (!berryTexture.loadFromFile("Assets/strawberry.png")) berryTexture.create(16, 16);
+    if (!berryTexture.loadFromFile("Assets/imagenes/strawberry.png")) berryTexture.create(16, 16);
 
-    if (!flagTexture.loadFromFile("Assets/flag.png")) flagTexture.create(32, 32);
+    if (!flagTexture.loadFromFile("Assets/imagenes/flag.png")) flagTexture.create(32, 32);
     flagSprite.setTexture(flagTexture);
 
     bool bgLoaded = false;
-    std::vector<std::string> bgNames = { "Assets/Background.png", "Assets/background.png" };
+    std::vector<std::string> bgNames = { "Assets/imagenes/Background.png", "Assets/imagenes/background.png" };
     for (const auto& name : bgNames) {
         if (bgTexture.loadFromFile(name)) {
             bgLoaded = true; bgSprite.setColor(sf::Color::White); break;
