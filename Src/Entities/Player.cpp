@@ -3,26 +3,21 @@
 #include <iostream>
 #include <cmath> 
 
-// ==========================================
-// CONSTANTES DE FÍSICA (Necesarias para que compile)
-// ==========================================
+// CONSTANTES DE FÍSICA
 const float SPEED = 140.0f;              
 const float GRAVITY = 900.0f;            
 const float JUMP_FORCE = -300.0f;        
 const float DASH_SPEED = 400.0f;         
 const float DASH_DURATION = 0.15f;       
 const float WALL_SLIDE_SPEED = 30.0f;    
-const float WALL_JUMP_FORCE_X = 200.0f;  
-const float WALL_JUMP_FORCE_Y = -300.0f; 
+const float WALL_JUMP_FORCE_X = 300.0f;  
+const float WALL_JUMP_FORCE_Y = -320.0f; 
 const float WALL_JUMP_TIME = 0.15f;      
 const float COYOTE_TIME = 0.1f;          
 const float JUMP_BUFFER_TIME = 0.1f;     
 const float ANIM_SPEED = 0.08f;          
-// ==========================================
 
-Player::Player(float x, float y) 
-    : Actor(x, y, 16.f, 32.f) 
-{
+Player::Player(float x, float y) : Actor(x, y, 32.f, 64.f) {
     spawnPosition = {x, y};
     velocity = {0.f, 0.f};
     isGrounded = false;
@@ -48,12 +43,13 @@ Player::Player(float x, float y)
     if (!animationFrames.empty()) {
         sprite.setTextureRect(animationFrames[0]);
         sprite.setOrigin(frameW / 2.f, (float)frameH);
+        sprite.setScale(2.0f, 2.0f); 
     }
 }
 
 void Player::Update(float dt, Level& level) {
-    // Resetear eventos
-    eventJumped = false; eventDashed = false; eventLanded = false; 
+    // Resetear eventos al inicio del frame
+    eventJumped = false; eventDashed = false; eventLanded = false; eventDied = false;
 
     if (isDashing) {
         dashTimer -= dt;
@@ -111,7 +107,7 @@ void Player::Update(float dt, Level& level) {
 
 void Player::Render(sf::RenderWindow& window) {
     sprite.setPosition(position.x + (hitboxSize.x / 2.0f), position.y + hitboxSize.y);
-    sprite.setScale(std::abs(sprite.getScale().x) * facingDir, sprite.getScale().y);
+    sprite.setScale(2.0f * facingDir, 2.0f);
     sprite.setColor(sf::Color::White);
     if (isDashing) sprite.setColor(sf::Color::Cyan);
     else if (!hasDash) sprite.setColor(sf::Color(100, 100, 200));
@@ -119,22 +115,36 @@ void Player::Render(sf::RenderWindow& window) {
 }
 
 void Player::CheckDeath(Level& level) {
-    if (position.y > 800) { Respawn(); return; }
+    // Muerte por caída al vacío
+    if (position.y > 1000) { // Aumenté un poco el límite por si el mapa es alto
+        eventDied = true; // <--- AVISAR MUERTE
+        Respawn(); 
+        return; 
+    }
+
+    // Muerte por pinchos
     sf::FloatRect box = GetHitbox();
     float ts = level.GetTileSize();
     box.left += 4; box.width -= 8; box.top += 4; box.height -= 8;
     int left = (int)(box.left / ts); int right = (int)((box.left + box.width) / ts);
     int top = (int)(box.top / ts); int bottom = (int)((box.top + box.height) / ts);
+    
     for (int i = left; i <= right; i++) {
         for (int j = top; j <= bottom; j++) {
-            if (level.IsHazard(i, j)) { Respawn(); return; }
+            if (level.IsHazard(i, j)) { 
+                eventDied = true; // <--- AVISAR MUERTE
+                Respawn(); 
+                return; 
+            }
         }
     }
 }
+
 void Player::Respawn() {
     position = spawnPosition; velocity = {0, 0};
     hasDash = true; isDashing = false; wallJumpTimer = 0; coyoteTimer = 0; jumpBufferTimer = 0;
 }
+
 void Player::StartDash() {
     if (hasDash) {
         isDashing = true; hasDash = false; dashTimer = DASH_DURATION; wallJumpTimer = 0; 
@@ -148,6 +158,7 @@ void Player::StartDash() {
         velocity.x = dirX * DASH_SPEED; velocity.y = dirY * DASH_SPEED;
     }
 }
+
 void Player::HandleInput() {
     if (isDashing) return;
     if (wallJumpTimer <= 0) {

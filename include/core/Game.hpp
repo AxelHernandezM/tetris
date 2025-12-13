@@ -7,7 +7,6 @@
 #include "Level.hpp"
 #include "ParticleSystem.hpp"
 
-// ESTADOS DEL JUEGO
 enum class GameState {
     MENU,
     PLAYING
@@ -31,19 +30,24 @@ private:
     bool isRunning;
     bool editorMode; bool isClicking; char selectedTile;
     
-    // UI JUEGO
+    // UI
     sf::Font font; sf::Text scoreText; sf::Text winText; int score;
 
-    // UI MENU
+    // MENU
     sf::Text titleText;       
     sf::Text instructionText; 
     GameState currentState;   
     float menuTimer;          
 
     bool gameWon; 
-    sf::SoundBuffer buffJump, buffDash, buffCollect; 
-    sf::Sound sndJump, sndDash, sndCollect;       
-    sf::Music music;   
+    
+    // --- AUDIO ---
+    // AQUI ESTABA EL ERROR: FALTABAN buffDeath y sndDeath
+    sf::SoundBuffer buffJump, buffDash, buffCollect, buffDeath; 
+    sf::Sound sndJump, sndDash, sndCollect, sndDeath;           
+    sf::Music music; 
+    // -------------
+
     ParticleSystem particleSystem; 
     Player* player;
     Level level;

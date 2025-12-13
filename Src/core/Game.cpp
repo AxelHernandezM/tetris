@@ -21,7 +21,6 @@ void Game::Init() {
 
     if (!font.loadFromFile("Assets/font.ttf")) std::cout << "[ERROR] Falta font.ttf" << std::endl;
     
-    // UI
     scoreText.setFont(font); scoreText.setString("Fresas: 0"); scoreText.setCharacterSize(30);
     scoreText.setFillColor(sf::Color::White); scoreText.setOutlineColor(sf::Color::Black); scoreText.setOutlineThickness(2.0f);
     scoreText.setPosition(20.f, 20.f);
@@ -29,7 +28,6 @@ void Game::Init() {
     winText.setFont(font); winText.setString("GANASTE\nPresiona R"); winText.setCharacterSize(50);
     winText.setFillColor(sf::Color::Yellow); winText.setOutlineColor(sf::Color::Black); winText.setOutlineThickness(4.0f);
 
-    // MENU UI
     titleText.setFont(font); titleText.setString("CELESTE CLONE"); titleText.setCharacterSize(60);
     titleText.setFillColor(sf::Color::Cyan); titleText.setOutlineColor(sf::Color::Black); titleText.setOutlineThickness(4.0f);
     sf::FloatRect tr = titleText.getLocalBounds(); titleText.setOrigin(tr.width/2, tr.height/2); titleText.setPosition(400, 200);
@@ -38,14 +36,18 @@ void Game::Init() {
     instructionText.setFillColor(sf::Color::White);
     sf::FloatRect ir = instructionText.getLocalBounds(); instructionText.setOrigin(ir.width/2, ir.height/2); instructionText.setPosition(400, 400);
 
-    // Audio
+    // AUDIOS
     if (buffJump.loadFromFile("Assets/jump.wav")) sndJump.setBuffer(buffJump);
     if (buffDash.loadFromFile("Assets/dash.wav")) sndDash.setBuffer(buffDash);
     if (buffCollect.loadFromFile("Assets/collect.wav")) sndCollect.setBuffer(buffCollect);
     
-    sndJump.setVolume(50); sndDash.setVolume(60); sndCollect.setVolume(70);
+    // CARGAR MUERTE
+    if (buffDeath.loadFromFile("Assets/death.wav")) sndDeath.setBuffer(buffDeath);
+    else std::cout << "[ERROR] Falta Assets/death.wav" << std::endl;
 
-    // Musica
+    sndJump.setVolume(50); sndDash.setVolume(60); sndCollect.setVolume(70); 
+    sndDeath.setVolume(80);
+
     if (!music.openFromFile("Assets/music.ogg")) std::cout << "[ERROR] Falta music.ogg" << std::endl;
     else { music.setLoop(true); music.setVolume(25); music.play(); }
 }
@@ -90,22 +92,15 @@ void Game::ProcessInput() {
             if (gameWon && event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::R) {
                 currentState = GameState::MENU; 
             }
-            // EDITOR: Activar
             if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::E) {
                 editorMode = !editorMode;
                 if (editorMode) window.setTitle("EDITOR ACTIVADO"); else window.setTitle("Celeste Clone - [JUEGO]");
             }
-            // EDITOR: Seleccionar Bloque
             if (editorMode && event.type == sf::Event::KeyPressed) {
                 if (event.key.code == sf::Keyboard::Num1) { selectedTile = '#'; window.setTitle("EDITOR: [1] PASTO #"); }
                 if (event.key.code == sf::Keyboard::Num2) { selectedTile = '^'; window.setTitle("EDITOR: [2] PINCHO ^"); }
                 if (event.key.code == sf::Keyboard::Num3) { selectedTile = '@'; window.setTitle("EDITOR: [3] FRESA @"); }
-                
-                // --- NUEVO: TECLA 4 PARA LADRILLO ---
-                if (event.key.code == sf::Keyboard::Num4) { 
-                    selectedTile = 'B'; 
-                    window.setTitle("EDITOR: [4] LADRILLO B"); 
-                }
+                if (event.key.code == sf::Keyboard::Num4) { selectedTile = 'B'; window.setTitle("EDITOR: [4] LADRILLO B"); }
             }
         }
     }
@@ -147,6 +142,11 @@ void Game::Update(float dt) {
         if (player->eventDashed) { sndDash.play(); }
         if (player->eventLanded) { particleSystem.Emit(feetPos, 4); }
         
+        // REPRODUCIR SONIDO SI MURIO
+        if (player->eventDied) {
+            sndDeath.play();
+        }
+
         if (level.CheckCollection(player->GetHitbox())) {
             score++; scoreText.setString("Fresas: " + std::to_string(score));
             sndCollect.play(); 
