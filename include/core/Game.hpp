@@ -7,15 +7,18 @@
 #include "Level.hpp"
 #include "ParticleSystem.hpp"
 
+// Define the game states
 enum class GameState {
     MENU,
-    PLAYING
+    PLAYING,
+    ENDING // Added ENDING state
 };
 
 class Game {
 public:
     Game();
     ~Game();
+
     void Init();
     void Run();
 
@@ -30,25 +33,39 @@ private:
     bool isRunning;
     bool editorMode; bool isClicking; char selectedTile;
     
-    // UI
-    sf::Font font; sf::Text scoreText; sf::Text winText; int score;
+    // UI Game
+    sf::Font font; 
+    sf::Text scoreText; 
+    sf::Text winText; 
+    int score;
 
-    // MENU
+    // UI Menu
     sf::Text titleText;       
     sf::Text instructionText; 
     GameState currentState;   
     float menuTimer;          
 
-    bool gameWon; 
+    // --- NEW: Ending System Variables ---
+    sf::Texture badEndingTex;  // Texture for bad ending
+    sf::Texture goodEndingTex; // Texture for good ending
+    sf::Sprite endingSprite;   // Sprite to display the ending image
     
-    // --- AUDIO ---
-    // AQUI ESTABA EL ERROR: FALTABAN buffDeath y sndDeath
-    sf::SoundBuffer buffJump, buffDash, buffCollect, buffDeath; 
-    sf::Sound sndJump, sndDash, sndCollect, sndDeath;           
-    sf::Music music; 
-    // -------------
+    // Configuration
+    const int LIMONES_PARA_GANAR = 5; // Threshold for good ending
+    // ---------------------------------
 
+    bool gameWon; 
+
+    // Audio
+    sf::SoundBuffer buffJump, buffDash, buffCollect; 
+    sf::Sound sndJump, sndDash, sndCollect;   
+    
+    // Background Music
+    sf::Music music;       
+
+    // Particles
     ParticleSystem particleSystem; 
+
     Player* player;
     Level level;
     std::chrono::high_resolution_clock::time_point lastFrameTime;

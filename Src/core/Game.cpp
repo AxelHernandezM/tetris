@@ -12,27 +12,28 @@ Game::~Game() { if (player) delete player; }
 void Game::Init() {
     std::srand(static_cast<unsigned>(std::time(nullptr))); 
 
-    // CAMBIO: Título de la ventana
-    window.create(sf::VideoMode(800, 600), "Itxcho");
+    window.create(sf::VideoMode(800, 600), "Itxcho - [JUEGO]");
     window.setFramerateLimit(60);
     camera.setSize(800.f, 600.f);
     
     currentState = GameState::MENU; 
     menuTimer = 0.0f;
 
-    // CAMBIO: Ruta Assets/texto/
+    // --- CAMBIO: RUTA DE FUENTE ---
     if (!font.loadFromFile("Assets/texto/font.ttf")) std::cout << "[ERROR] Falta Assets/texto/font.ttf" << std::endl;
     
-    // CAMBIO: Texto "Limones"
     scoreText.setFont(font); scoreText.setString("Limones: 0"); scoreText.setCharacterSize(30);
     scoreText.setFillColor(sf::Color::White); scoreText.setOutlineColor(sf::Color::Black); scoreText.setOutlineThickness(2.0f);
     scoreText.setPosition(20.f, 20.f);
 
+    // --- CAMBIO: RUTA DE IMÁGENES FINAL ---
+    if (!badEndingTex.loadFromFile("Assets/imagenes/ending_bad.png")) std::cout << "[ERROR] Falta Assets/imagenes/ending_bad.png" << std::endl;
+    if (!goodEndingTex.loadFromFile("Assets/imagenes/ending_good.png")) std::cout << "[ERROR] Falta Assets/imagenes/ending_good.png" << std::endl;
+
     winText.setFont(font); winText.setString("GANASTE\nPresiona R"); winText.setCharacterSize(50);
     winText.setFillColor(sf::Color::Yellow); winText.setOutlineColor(sf::Color::Black); winText.setOutlineThickness(4.0f);
 
-    // CAMBIO: Título del menú
-    titleText.setFont(font); titleText.setString("ITXCHO"); titleText.setCharacterSize(80); // Más grande
+    titleText.setFont(font); titleText.setString("ITXCHO"); titleText.setCharacterSize(60);
     titleText.setFillColor(sf::Color::Cyan); titleText.setOutlineColor(sf::Color::Black); titleText.setOutlineThickness(4.0f);
     sf::FloatRect tr = titleText.getLocalBounds(); titleText.setOrigin(tr.width/2, tr.height/2); titleText.setPosition(400, 200);
 
@@ -40,18 +41,14 @@ void Game::Init() {
     instructionText.setFillColor(sf::Color::White);
     sf::FloatRect ir = instructionText.getLocalBounds(); instructionText.setOrigin(ir.width/2, ir.height/2); instructionText.setPosition(400, 400);
 
-    // CAMBIO: Rutas Assets/musica/
+    // --- CAMBIO: RUTA DE AUDIO (musica/) ---
     if (buffJump.loadFromFile("Assets/musica/jump.wav")) sndJump.setBuffer(buffJump);
     if (buffDash.loadFromFile("Assets/musica/dash.wav")) sndDash.setBuffer(buffDash);
     if (buffCollect.loadFromFile("Assets/musica/collect.wav")) sndCollect.setBuffer(buffCollect);
     
-    if (buffDeath.loadFromFile("Assets/musica/death.wav")) sndDeath.setBuffer(buffDeath);
-    else std::cout << "[ERROR] Falta Assets/musica/death.wav" << std::endl;
+    sndJump.setVolume(50); sndDash.setVolume(60); sndCollect.setVolume(70);
 
-    sndJump.setVolume(50); sndDash.setVolume(60); sndCollect.setVolume(70); 
-    sndDeath.setVolume(80);
-
-    // CAMBIO: Ruta musica
+    // --- CAMBIO: RUTA DE MÚSICA (musica/) ---
     if (!music.openFromFile("Assets/musica/music.ogg")) std::cout << "[ERROR] Falta Assets/musica/music.ogg" << std::endl;
     else { music.setLoop(true); music.setVolume(25); music.play(); }
 }
@@ -62,8 +59,6 @@ void Game::ResetGame() {
     sf::Vector2f startPos = level.GetPlayerSpawn();
     player = new Player(startPos.x, startPos.y); 
     score = 0;
-    gameWon = false;
-    // CAMBIO: Resetear texto a Limones
     scoreText.setString("Limones: 0");
     lastFrameTime = std::chrono::high_resolution_clock::now();
 }
@@ -94,18 +89,20 @@ void Game::ProcessInput() {
             }
         }
         else if (currentState == GameState::PLAYING) {
-            if (gameWon && event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::R) {
-                currentState = GameState::MENU; 
-            }
             if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::E) {
                 editorMode = !editorMode;
-                if (editorMode) window.setTitle("EDITOR ACTIVADO"); else window.setTitle("Itxcho");
+                if (editorMode) window.setTitle("EDITOR ACTIVADO"); else window.setTitle("Itxcho - [JUEGO]");
             }
             if (editorMode && event.type == sf::Event::KeyPressed) {
-                if (event.key.code == sf::Keyboard::Num1) { selectedTile = '#'; window.setTitle("EDITOR: [1] PASTO #"); }
-                if (event.key.code == sf::Keyboard::Num2) { selectedTile = '^'; window.setTitle("EDITOR: [2] PINCHO ^"); }
-                if (event.key.code == sf::Keyboard::Num3) { selectedTile = '@'; window.setTitle("EDITOR: [3] LIMON @"); }
-                if (event.key.code == sf::Keyboard::Num4) { selectedTile = 'B'; window.setTitle("EDITOR: [4] LADRILLO B"); }
+                if (event.key.code == sf::Keyboard::Num1) { selectedTile = '#'; window.setTitle("EDITOR: [1] PASTO"); }
+                if (event.key.code == sf::Keyboard::Num2) { selectedTile = '^'; window.setTitle("EDITOR: [2] PINCHO"); }
+                if (event.key.code == sf::Keyboard::Num3) { selectedTile = '@'; window.setTitle("EDITOR: [3] LIMON"); }
+                if (event.key.code == sf::Keyboard::Num4) { selectedTile = 'B'; window.setTitle("EDITOR: [4] LADRILLO"); }
+            }
+        }
+        else if (currentState == GameState::ENDING) {
+            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::R) {
+                currentState = GameState::MENU;
             }
         }
     }
@@ -132,7 +129,7 @@ void Game::Update(float dt) {
         return; 
     }
 
-    if (gameWon) return;
+    if (currentState == GameState::ENDING) return;
 
     particleSystem.Update(dt);
 
@@ -147,19 +144,27 @@ void Game::Update(float dt) {
         if (player->eventDashed) { sndDash.play(); }
         if (player->eventLanded) { particleSystem.Emit(feetPos, 4); }
         
-        if (player->eventDied) { sndDeath.play(); }
-
         if (level.CheckCollection(player->GetHitbox())) {
-            score++; 
-            // CAMBIO: Actualizar marcador a Limones
-            scoreText.setString("Limones: " + std::to_string(score));
+            score++; scoreText.setString("Limones: " + std::to_string(score));
             sndCollect.play(); 
         }
 
         if (level.CheckWin(player->GetHitbox())) {
             if (level.IsLastLevel()) {
-                gameWon = true; sndCollect.play();
-            } else {
+                if (score >= LIMONES_PARA_GANAR) {
+                    endingSprite.setTexture(goodEndingTex);
+                } else {
+                    endingSprite.setTexture(badEndingTex);
+                }
+                
+                sf::Vector2u texSize = endingSprite.getTexture()->getSize();
+                endingSprite.setScale(800.f / texSize.x, 600.f / texSize.y);
+                endingSprite.setPosition(0, 0);
+
+                currentState = GameState::ENDING; 
+                sndCollect.play();
+            } 
+            else {
                 level.NextLevel();
                 player->SetSpawnPoint(level.GetPlayerSpawn());
                 sndCollect.play();
@@ -179,6 +184,16 @@ void Game::Render() {
         return; 
     }
 
+    if (currentState == GameState::ENDING) {
+        window.setView(window.getDefaultView());
+        window.draw(endingSprite);
+        instructionText.setString("Presiona R para volver al Menu");
+        instructionText.setPosition(400, 550);
+        window.draw(instructionText);
+        window.display();
+        return;
+    }
+
     if (player) {
         sf::Vector2f pos = player->GetPosition();
         camera.setCenter(pos.x + 10.f, pos.y + 10.f);
@@ -191,13 +206,6 @@ void Game::Render() {
 
     window.setView(window.getDefaultView());
     window.draw(scoreText);
-
-    if (gameWon) {
-        sf::FloatRect textRect = winText.getLocalBounds();
-        winText.setOrigin(textRect.width / 2.0f, textRect.height / 2.0f);
-        winText.setPosition(400.f, 300.f);
-        window.draw(winText);
-    }
 
     window.display();
 }

@@ -3,9 +3,6 @@
 #include <iostream>
 #include <cmath> 
 
-// ==========================================
-// CONSTANTES DE FÍSICA
-// ==========================================
 const float SPEED = 140.0f;              
 const float GRAVITY = 900.0f;            
 const float JUMP_FORCE = -300.0f;        
@@ -19,21 +16,22 @@ const float COYOTE_TIME = 0.1f;
 const float JUMP_BUFFER_TIME = 0.1f;     
 const float ANIM_SPEED = 0.08f;          
 
-Player::Player(float x, float y) : Actor(x, y, 32.f, 64.f) {
+Player::Player(float x, float y) 
+    : Actor(x, y, 16.f, 32.f) 
+{
     spawnPosition = {x, y};
     velocity = {0.f, 0.f};
     isGrounded = false;
     hasDash = true; isDashing = false; dashTimer = 0.f;
     wallDir = 0; wallJumpTimer = 0.f; coyoteTimer = 0.f; jumpBufferTimer = 0.f;
 
-    // --- CAMBIO: RUTA ACTUALIZADA A Assets/imagenes/ ---
+    // --- CAMBIO: RUTA DE IMAGEN ---
     if (!texture.loadFromFile("Assets/imagenes/CHIAPASIANOTE.png")) { 
-        std::cout << "[ERROR] No se encontro Assets/imagenes/CHIAPASIANOTE.png" << std::endl;
-        texture.create(32, 32); // Crea un cuadro blanco si falla para que no crashee
+        std::cout << "[ERROR] Falta Assets/imagenes/CHIAPASIANOTE.png" << std::endl;
+        texture.create(32, 32);
     } 
     sprite.setTexture(texture);
 
-    // Configuración de animación
     int numFrames = 12; int frameW = 16; int frameH = 32; 
     animationFrames.clear();
     for (int i = 0; i < numFrames; i++) {
@@ -47,15 +45,11 @@ Player::Player(float x, float y) : Actor(x, y, 32.f, 64.f) {
     if (!animationFrames.empty()) {
         sprite.setTextureRect(animationFrames[0]);
         sprite.setOrigin(frameW / 2.f, (float)frameH);
-        
-        // Escala del personaje (Gigante)
-        sprite.setScale(2.0f, 2.0f); 
     }
 }
 
 void Player::Update(float dt, Level& level) {
-    // Resetear banderas de eventos al inicio del frame
-    eventJumped = false; eventDashed = false; eventLanded = false; eventDied = false;
+    eventJumped = false; eventDashed = false; eventLanded = false; 
 
     if (isDashing) {
         dashTimer -= dt;
@@ -65,7 +59,6 @@ void Player::Update(float dt, Level& level) {
     if (coyoteTimer > 0) coyoteTimer -= dt;
     if (jumpBufferTimer > 0) jumpBufferTimer -= dt;
 
-    // Detección de paredes
     wallDir = 0;
     sf::FloatRect box = GetHitbox();
     sf::FloatRect boxLeft = box; boxLeft.left -= 2.0f; 
@@ -75,16 +68,13 @@ void Player::Update(float dt, Level& level) {
 
     HandleInput();
 
-    // Gravedad
     if (!isDashing) {
         if (velocity.y > 0 && wallDir != 0 && !isGrounded) velocity.y = WALL_SLIDE_SPEED; 
         else velocity.y += GRAVITY * dt;   
     }
 
-    // Movimiento X
     MoveX(velocity.x * dt, level, [this]() { velocity.x = 0; });
     
-    // Movimiento Y
     isGrounded = false;
     MoveY(velocity.y * dt, level, [this]() {
         if (velocity.y > 0) { 
@@ -94,7 +84,6 @@ void Player::Update(float dt, Level& level) {
         velocity.y = 0;
     });
 
-    // Animaciones
     if (!animationFrames.empty()) {
         bool isMoving = std::abs(velocity.x) > 10.f;
         bool isOnFloor = coyoteTimer > 0.0f; 
@@ -113,64 +102,35 @@ void Player::Update(float dt, Level& level) {
         }
         sprite.setTextureRect(animationFrames[currentFrame]);
     }
-
-    // Checar si murió
     CheckDeath(level);
 }
 
 void Player::Render(sf::RenderWindow& window) {
-    // Sincronizar sprite con hitbox
     sprite.setPosition(position.x + (hitboxSize.x / 2.0f), position.y + hitboxSize.y);
-    
-    // Escala y Dirección
-    sprite.setScale(2.0f * facingDir, 2.0f);
-    
-    // Colores por estado
+    sprite.setScale(std::abs(sprite.getScale().x) * facingDir, sprite.getScale().y);
     sprite.setColor(sf::Color::White);
     if (isDashing) sprite.setColor(sf::Color::Cyan);
     else if (!hasDash) sprite.setColor(sf::Color(100, 100, 200));
-    
     window.draw(sprite);
 }
 
 void Player::CheckDeath(Level& level) {
-    // 1. Caída al vacío
-    if (position.y > 1200) { // Margen amplio para mapas altos
-        eventDied = true; 
-        Respawn(); 
-        return; 
-    }
-
-    // 2. Colisión con peligros (Pinchos)
+    if (position.y > 800) { Respawn(); return; }
     sf::FloatRect box = GetHitbox();
     float ts = level.GetTileSize();
-    // Hacemos la caja un poco más chica para perdonar roces leves
     box.left += 4; box.width -= 8; box.top += 4; box.height -= 8;
-    
     int left = (int)(box.left / ts); int right = (int)((box.left + box.width) / ts);
     int top = (int)(box.top / ts); int bottom = (int)((box.top + box.height) / ts);
-    
     for (int i = left; i <= right; i++) {
         for (int j = top; j <= bottom; j++) {
-            if (level.IsHazard(i, j)) { 
-                eventDied = true; 
-                Respawn(); 
-                return; 
-            }
+            if (level.IsHazard(i, j)) { Respawn(); return; }
         }
     }
 }
-
 void Player::Respawn() {
-    position = spawnPosition; 
-    velocity = {0, 0};
-    hasDash = true; 
-    isDashing = false; 
-    wallJumpTimer = 0; 
-    coyoteTimer = 0; 
-    jumpBufferTimer = 0;
+    position = spawnPosition; velocity = {0, 0};
+    hasDash = true; isDashing = false; wallJumpTimer = 0; coyoteTimer = 0; jumpBufferTimer = 0;
 }
-
 void Player::StartDash() {
     if (hasDash) {
         isDashing = true; hasDash = false; dashTimer = DASH_DURATION; wallJumpTimer = 0; 
@@ -184,37 +144,26 @@ void Player::StartDash() {
         velocity.x = dirX * DASH_SPEED; velocity.y = dirY * DASH_SPEED;
     }
 }
-
 void Player::HandleInput() {
     if (isDashing) return;
-
-    // Movimiento Horizontal
     if (wallJumpTimer <= 0) {
         velocity.x = 0;
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) { velocity.x = SPEED; facingDir = 1; }
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) { velocity.x = -SPEED; facingDir = -1; }
     }
-
-    // Salto (Z)
     static bool wasZPressed = false; bool isZPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Z);
     if (isZPressed && !wasZPressed) jumpBufferTimer = JUMP_BUFFER_TIME;
     wasZPressed = isZPressed;
-    
     if (jumpBufferTimer > 0) {
         if (coyoteTimer > 0) { 
-            // Salto normal
             velocity.y = JUMP_FORCE; jumpBufferTimer = 0; coyoteTimer = 0; isGrounded = false; 
             eventJumped = true; 
         }
         else if (wallDir != 0) { 
-            // Wall Jump
-            velocity.y = WALL_JUMP_FORCE_Y; velocity.x = -wallDir * WALL_JUMP_FORCE_X; 
-            wallJumpTimer = WALL_JUMP_TIME; facingDir = -wallDir; jumpBufferTimer = 0; 
+            velocity.y = WALL_JUMP_FORCE_Y; velocity.x = -wallDir * WALL_JUMP_FORCE_X; wallJumpTimer = WALL_JUMP_TIME; facingDir = -wallDir; jumpBufferTimer = 0; 
             eventJumped = true; 
         }
     }
-
-    // Dash (X)
     static bool wasXPressed = false; bool isXPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::X);
     if (isXPressed && !wasXPressed) StartDash();
     wasXPressed = isXPressed;
